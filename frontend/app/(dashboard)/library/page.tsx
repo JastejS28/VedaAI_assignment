@@ -7,7 +7,8 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
-  Loader2,
+  FileText,
+  Sparkles,
   SearchX,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
@@ -75,6 +76,21 @@ const subjectColors: Record<string, { bg: string; text: string; icon: string }> 
 };
 
 const defaultColor = { bg: "bg-gray-50", text: "text-gray-700", icon: "text-gray-500" };
+
+const starterResources = [
+  {
+    title: "Assessment Blueprint",
+    description: "Balanced split for MCQ, short, long and diagram questions.",
+  },
+  {
+    title: "Prompt Template",
+    description: "Reusable structure for chapter-wise, board-aligned generation.",
+  },
+  {
+    title: "Paper Quality Checklist",
+    description: "Verify clarity, syllabus match, and answer-key correctness.",
+  },
+];
 
 function getSubjectColor(subject: string) {
   return subjectColors[subject] ?? defaultColor;
@@ -171,8 +187,8 @@ export default function LibraryPage(): JSX.Element {
 
       {/* Empty state */}
       {groups.length === 0 && (
-        <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
-          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 lg:h-32 lg:w-32">
+        <div className="mb-5 flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-14 text-center">
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 lg:h-24 lg:w-24">
             <SearchX size={40} className="text-gray-400" />
           </div>
           <h2 className="mb-2 text-lg font-semibold text-gray-900">
@@ -191,6 +207,27 @@ export default function LibraryPage(): JSX.Element {
           </button>
         </div>
       )}
+
+      <div className="mb-5 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="flex items-center gap-2">
+          <Sparkles size={16} className="text-gray-700" />
+          <h2 className="text-base font-semibold text-gray-900">Starter Resources</h2>
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          Handy references to improve your next AI-generated assessment.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {starterResources.map((resource) => (
+            <div key={resource.title} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center gap-2">
+                <FileText size={14} className="text-gray-500" />
+                <h3 className="text-sm font-semibold text-gray-900">{resource.title}</h3>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-gray-600">{resource.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Subject groups */}
       <div className="space-y-4">

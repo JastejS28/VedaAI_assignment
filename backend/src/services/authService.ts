@@ -60,7 +60,7 @@ function createToken(userId: string): string {
     throw createAppError("JWT_SECRET is not set", 500, "config_error");
   }
 
-  return jwt.sign({}, secret, { subject: userId, expiresIn: "7d" });
+  return jwt.sign({}, secret, { subject: userId, expiresIn: "30d" });
 }
 
 export async function registerUser(input: RegisterInput): Promise<AuthResult> {

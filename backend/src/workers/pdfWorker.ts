@@ -36,6 +36,139 @@ function getDifficultyStyle(difficulty: string): string {
 	}
 }
 
+function buildDagreSvg(
+	diagramData: {
+		nodes?: Array<{ id: string; label: string }>;
+		edges?: Array<{ from: string; to: string; label?: string }>;
+	},
+	markerId: string
+): string {
+	const nodes = Array.isArray(diagramData.nodes) ? diagramData.nodes : [];
+	const edges = Array.isArray(diagramData.edges) ? diagramData.edges : [];
+	if (nodes.length === 0) {
+		return "";
+	}
+
+	const boxWidth = 200;
+	const boxHeight = 46;
+	const horizontalGap = 44;
+	const verticalGap = 30;
+	const width = boxWidth * 2 + horizontalGap + 24;
+	const height = Math.max(nodes.length, 1) * (boxHeight + verticalGap) + 24;
+
+	const positions = new Map<string, { x: number; y: number; label: string }>();
+	nodes.forEach((node, index) => {
+		const isLeft = index % 2 === 0;
+		const row = Math.floor(index / 2);
+		positions.set(node.id, {
+			label: node.label,
+			x: isLeft ? 12 : 12 + boxWidth + horizontalGap,
+			y: 12 + row * (boxHeight + verticalGap),
+		});
+	});
+
+	const edgeLines = edges
+		.map((edge, index) => {
+			const from = positions.get(edge.from);
+			const to = positions.get(edge.to);
+			if (!from || !to) {
+				return "";
+			}
+
+			const startX = from.x + boxWidth / 2;
+			const startY = from.y + boxHeight;
+			const endX = to.x + boxWidth / 2;
+			const endY = to.y;
+			const labelX = (startX + endX) / 2;
+			const labelY = (startY + endY) / 2 - 8;
+			const edgeKey = `${escapeHtml(edge.from)}-${escapeHtml(edge.to)}-${index}`;
+
+			return `
+				<g data-edge="${edgeKey}">
+					<line
+						x1="${startX}"
+						y1="${startY}"
+						x2="${endX}"
+						y2="${endY}"
+						stroke="#6B7280"
+						stroke-width="1.5"
+						marker-end="url(#${markerId})"
+					/>
+					${
+						edge.label
+							? `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="11" fill="#4B5563">${escapeHtml(edge.label)}</text>`
+							: ""
+					}
+				</g>
+			`;
+		})
+		.join("");
+
+	const nodeBoxes = nodes
+		.map((node) => {
+			const position = positions.get(node.id);
+			if (!position) {
+				return "";
+			}
+			return `
+				<g data-node="${escapeHtml(node.id)}">
+					<rect
+						x="${position.x}"
+						y="${position.y}"
+						width="${boxWidth}"
+						height="${boxHeight}"
+						rx="6"
+						fill="#FFFFFF"
+						stroke="#9CA3AF"
+					/>
+					<text
+						x="${position.x + boxWidth / 2}"
+						y="${position.y + boxHeight / 2 + 4}"
+						text-anchor="middle"
+						font-size="11"
+						fill="#111827"
+					>${escapeHtml(position.label)}</text>
+				</g>
+			`;
+		})
+		.join("");
+
+	return `
+		<svg viewBox="0 0 ${width} ${height}" class="diagram-svg">
+			<defs>
+				<marker id="${markerId}" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+					<polygon points="0 0, 8 3, 0 6" fill="#6B7280" />
+				</marker>
+			</defs>
+			${edgeLines}
+			${nodeBoxes}
+		</svg>
+	`;
+}
+
+function buildDiagramHtml(
+	question: Assessment["sections"][number]["questions"][number],
+	sectionId: string
+): string {
+	if (question.imageUrl) {
+		return `<img src="${escapeHtml(question.imageUrl)}" alt="Question diagram" class="diagram-image" />`;
+	}
+
+	if (question.diagramData?.renderType === "svg" && question.diagramData.svgContent) {
+		return `<div class="diagram-wrap">${question.diagramData.svgContent}</div>`;
+	}
+
+	if (question.diagramData?.renderType === "dagre") {
+		const markerId = `arrow-${escapeHtml(sectionId)}-${question.id}`;
+		const svg = buildDagreSvg(question.diagramData, markerId);
+		if (svg) {
+			return `<div class="diagram-wrap">${svg}</div>`;
+		}
+	}
+
+	return "";
+}
+
 function buildExamHtml(paper: Assessment): string {
 	const sectionHtml = paper.sections
 		.map((section) => {
@@ -52,6 +185,7 @@ function buildExamHtml(paper: Assessment): string {
 								)
 								.join("")}</div>`
 						: "";
+					const diagram = buildDiagramHtml(question, section.id);
 
 					return `
 						<div class="question">
@@ -61,6 +195,7 @@ function buildExamHtml(paper: Assessment): string {
 								${marksTag}
 							</div>
 							${options}
+							${diagram}
 						</div>
 					`;
 				})
@@ -112,6 +247,9 @@ function buildExamHtml(paper: Assessment): string {
 					.q-marks { color: #6B6B6B; font-size: 12px; white-space: nowrap; margin-left: 8px; }
 					.badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 500; margin-right: 4px; vertical-align: middle; }
 					.options { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 12px; margin-left: 30px; margin-top: 4px; }
+					.diagram-wrap { margin-top: 8px; margin-left: 30px; border: 1px solid #E5E7EB; background: #F9FAFB; border-radius: 8px; padding: 8px; }
+					.diagram-image { margin-top: 8px; margin-left: 30px; max-width: calc(100% - 30px); border: 1px solid #E5E7EB; border-radius: 8px; }
+					.diagram-svg { width: 100%; height: auto; display: block; }
 					.end { text-align: center; font-weight: 700; font-size: 13px; margin-top: 24px; padding: 8px 0; border-top: 1px solid #D1D5DB; border-bottom: 1px solid #D1D5DB; }
 					.answer-section { margin-top: 24px; border-top: 2px solid #D1D5DB; padding-top: 12px; }
 					.answer-heading { font-weight: 700; font-size: 14px; margin-bottom: 8px; }

@@ -76,6 +76,7 @@ export default function Page(): JSX.Element {
           title={assignment.title}
           assignedOn={formatDate(assignment.createdAt)}
           dueDate={formatDate(assignment.dueDate)}
+          onView={() => router.push(`/assignments/${assignment._id}/output`)}
         />
       )),
     [assignments]
@@ -97,7 +98,7 @@ export default function Page(): JSX.Element {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-xl bg-gray-100 p-3 md:flex-row md:items-center md:justify-between">
+      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 md:flex-row md:items-center md:justify-between">
         <button
           type="button"
           className="flex items-center gap-2 text-sm text-gray-500"

@@ -37,7 +37,7 @@ export const QuestionSchema = z.object({
 	marks: z.number().positive(),
 	options: z.array(z.string()).optional().nullable(),
 	answer: z.string().optional().nullable(),
-	imageUrl: z.string().url().optional().nullable(),
+	imageUrl: z.string().optional().nullable(),
 	diagramData: DiagramDataSchema.optional().nullable(),
 });
 

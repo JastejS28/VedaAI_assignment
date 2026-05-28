@@ -11,6 +11,8 @@ import { toast } from "sonner";
 interface DiagramData {
   renderType: "svg" | "dagre";
   svgContent?: string;
+  nodes?: Array<{ id: string; label: string }>;
+  edges?: Array<{ from: string; to: string; label?: string }>;
 }
 
 interface Question {
