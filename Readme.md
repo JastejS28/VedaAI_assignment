@@ -1,31 +1,45 @@
 # VedaAI
 
-AI-powered assessment creator for teachers.  
-VedaAI helps educators generate structured question papers from curriculum inputs and optional source material (PDF/image), then review, regenerate sections, and export print-ready PDFs.
+VedaAI is an AI-powered assessment builder for teachers. It turns curriculum inputs and optional source material (PDF/image) into structured question papers, supports section-level regeneration, and exports print-ready PDFs.
 
-## Why VedaAI
+## Highlights
 
-- Create full exam papers in minutes, not hours
-- Support multiple question types: MCQ, short, long, numerical, true/false, diagram
-- Use uploaded PDF/image as context for grounded question generation
-- Regenerate only weak sections instead of regenerating the whole paper
-- Download polished question papers with answer keys as PDF
+- Full paper generation in minutes with Gemini + strict Zod validation
+- Section-level regeneration without losing the rest of the paper
+- Real-time status updates over WebSocket with polling fallback
+- Queue-based async processing with BullMQ + Redis
+- Diagram support (inline SVG or dagre-style node graphs)
+- One-click PDF export via Puppeteer
 
-## Core Features
+## Tech Stack
 
-- Authentication with profile and avatar
-- Assignment builder with dynamic question-type configuration
-- AI generation with Gemini and strict Zod validation
-- Real-time status updates over WebSocket
-- Queue-based processing using BullMQ + Redis
-- Diagram support (`svg` and graph-style `dagre` data)
-- PDF export through Puppeteer
-
----
+- Frontend: Next.js (App Router), TypeScript, Tailwind, Zustand
+- Backend: Node.js, Express, TypeScript, ws
+- AI: Gemini (`@google/generative-ai`)
+- Data: MongoDB + Mongoose
+- Queue/Cache: Redis + BullMQ
+- File/PDF: Multer, pdf-parse, Puppeteer
 
 ## Architecture
 
-### High-level system
+### Version 1 (hand-drawn, simple)
+
+Draw a clean, minimal block diagram that shows the core flow only. This is the one to sketch by hand on paper:
+
+1) Browser (Next.js)
+2) API + WebSocket (Express)
+3) MongoDB + Redis
+4) Workers (Generation + PDF)
+5) Gemini + Puppeteer
+
+Use arrows like:
+
+Frontend -> API -> DB/Redis
+API -> Workers -> Gemini/Puppeteer -> DB/Redis -> Frontend
+
+Keep it simple and readable in a single page.
+
+### Version 2 (detailed, practical)
 
 ```mermaid
 flowchart LR
@@ -45,29 +59,26 @@ flowchart LR
   I --> E
 ```
 
-### Stack
+### Add the hand-drawn PNG to this README
 
-- **Frontend**: Next.js (App Router), TypeScript, TailwindCSS, Zustand
-- **Backend**: Node.js, Express, TypeScript, `ws`
-- **AI**: Gemini (`@google/generative-ai`)
-- **Data**: MongoDB + Mongoose
-- **Queue/Cache**: Redis + BullMQ
-- **File/Export**: Multer, pdf-parse, Puppeteer
+1) Create a folder called `docs/architecture` at repo root.
+2) Save your hand-drawn photo as `docs/architecture/arch-v1.png`.
+3) Add this markdown in the README where you want the image:
 
----
+```
+![Architecture v1](docs/architecture/arch-v1.png)
+```
 
-## Approach
+## System Approach
 
-1. Teacher creates an assignment configuration.
-2. Backend stores assignment metadata and enqueues a generation job.
-3. Worker builds prompt, optionally parses uploaded content, calls Gemini.
-4. Response is parsed and validated against strict Zod schemas.
-5. Valid paper is stored in MongoDB and cached in Redis.
-6. Frontend receives completion/failure via WebSocket (poll fallback is available).
-7. Teacher can regenerate a single section (token-efficient update).
-8. PDF export runs as a separate queue job and streams downloadable file.
-
----
+1) Teacher creates an assignment configuration.
+2) Backend stores metadata and enqueues a generation job.
+3) Worker builds the prompt, optionally parses uploaded content, and calls Gemini.
+4) Response is parsed and validated against strict Zod schemas.
+5) Valid paper is stored in MongoDB and cached in Redis.
+6) Frontend receives completion or failure via WebSocket (poll fallback is available).
+7) Section regeneration re-queues a job and updates only that section.
+8) PDF export runs as a separate queue job and streams a downloadable file.
 
 ## Project Structure
 
@@ -78,8 +89,6 @@ vedaai/
 ├─ docs/          # PRD/UI docs
 └─ package.json   # workspace scripts
 ```
-
----
 
 ## Local Development
 
@@ -99,7 +108,7 @@ npm install
 
 ### 3) Environment variables
 
-#### `backend/.env`
+#### backend/.env
 
 ```env
 PORT=4000
@@ -112,7 +121,7 @@ UPLOAD_DIR=./uploads
 CORS_ORIGIN=http://localhost:3000
 ```
 
-#### `frontend/.env.local`
+#### frontend/.env.local
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
@@ -135,32 +144,19 @@ cd frontend
 npm run dev
 ```
 
-Frontend: `http://localhost:3000`  
-Backend: `http://localhost:4000`
+Frontend: http://localhost:3000
+Backend: http://localhost:4000
 
----
+## Deployment
 
-## Deployment (Detailed, Step-by-step)
+### Recommended setup
 
-Recommended production setup:
+- Frontend on Vercel
+- Backend + workers + ws on Render/Railway/Fly
+- MongoDB Atlas
+- Upstash Redis
 
-- **Frontend** on Vercel
-- **Backend + workers + ws** on Railway (or Render/Fly)
-- **MongoDB Atlas**
-- **Redis (Upstash/Redis Cloud)**
-
-### Step 1: Prepare production services
-
-1. Create a MongoDB Atlas cluster and copy connection URI.
-2. Create a Redis database (Upstash/Redis Cloud) and copy `REDIS_URL`.
-3. Generate a strong `JWT_SECRET` (32+ chars).
-4. Keep your `GEMINI_API_KEY` ready.
-
-### Step 2: Deploy backend first
-
-Use Railway/Render and point root directory to `backend`.
-
-#### Backend environment variables (required)
+### Backend environment variables
 
 ```env
 NODE_ENV=production
@@ -174,69 +170,38 @@ UPLOAD_DIR=./uploads
 CORS_ORIGIN=https://<your-frontend-domain>
 ```
 
-#### Build/start commands
-
-- Build: `npm run build`
-- Start: `npm run start`
-
-> This starts Express + WebSocket server + imported workers in one process.
-
-### Step 3: Deploy frontend on Vercel
-
-1. Import repository in Vercel.
-2. Set project root to `frontend`.
-3. Configure environment variables:
+### Frontend environment variables
 
 ```env
 NEXT_PUBLIC_API_URL=https://<your-backend-domain>
 NEXT_PUBLIC_WS_URL=wss://<your-backend-domain>
 ```
 
-4. Deploy.
-
-### Step 4: Verify connectivity
-
-1. Open frontend URL.
-2. Register/login and create a sample assignment.
-3. Confirm:
-   - generation status updates
-   - output page loads
-   - section regenerate works
-   - PDF download works
-
-### Step 5: Production hardening checklist
-
-- Keep `USE_MOCK_GEMINI=false`
-- Ensure backend supports WebSocket on same domain/port
-- Confirm cookie auth and CORS settings match frontend domain
-- Monitor Redis availability (queues depend on it)
-- Use managed file storage (S3/Cloudinary) if local uploads are ephemeral on host
-
----
-
 ## API Overview
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/assignments`
-- `POST /api/assignments`
-- `GET /api/assignments/:id/paper`
-- `POST /api/assignments/:id/regenerate`
-- `POST /api/assignments/:id/regenerate-section`
-- `POST /api/assignments/:id/export-pdf`
-- `GET /api/assignments/:id/download`
-- `POST /api/upload`
-
----
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/assignments
+- POST /api/assignments
+- GET /api/assignments/:id/paper
+- GET /api/assignments/:id/status
+- POST /api/assignments/:id/regenerate
+- POST /api/assignments/:id/regenerate-section
+- POST /api/assignments/:id/export-pdf
+- GET /api/assignments/:id/download
+- POST /api/upload
 
 ## Status
-
-VedaAI currently includes:
 
 - End-to-end assignment generation pipeline
 - Diagram rendering in UI and PDF export
 - Section regeneration and queue-based async processing
 - Dashboard + assignments + groups + toolkit + library flows
+- Error boundaries, toast notifications, skeleton loading states
+- Auth protection on all dashboard routes
+- Landing page with feature showcase
 
-hi
+## License
+
+MIT
